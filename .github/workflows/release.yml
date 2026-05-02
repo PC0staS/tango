@@ -1,0 +1,125 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          OUTPUT=tango-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            OUTPUT="${OUTPUT}.exe"
+          fi
+          go build -ldflags "-X main.Version=${VERSION}" -o "dist/${OUTPUT}" .
+          echo "BUILD_NAME=${OUTPUT}" >> $GITHUB_ENV
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: tango-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/tango-*
+
+      - name: Generate completions (linux amd64 only)
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          chmod +x dist/tango-linux-amd64
+          mkdir -p dist/completions
+          ./dist/tango-linux-amd64 completion bash > dist/completions/tango.bash
+          ./dist/tango-linux-amd64 completion zsh  > dist/completions/_tango
+          ./dist/tango-linux-amd64 completion fish > dist/completions/tango.fish
+
+      - name: Upload completions
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: completions
+          path: dist/completions/
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download linux amd64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: tango-linux-amd64
+          path: dist/
+
+      - name: Download completions
+        uses: actions/download-artifact@v4
+        with:
+          name: completions
+          path: dist/completions/
+
+      - name: Install nfpm
+        run: |
+          curl -sSfL https://github.com/goreleaser/nfpm/releases/download/v2.41.3/nfpm_2.41.3_linux_amd64.tar.gz | tar xz
+          sudo mv nfpm /usr/local/bin/
+
+      - name: Generate .deb package
+        env:
+          ARCH: amd64
+          VERSION: ${{ github.ref_name }}
+        run: |
+          cp dist/tango-linux-amd64 dist/tango
+          chmod +x dist/tango
+          nfpm package --config nfpm.yaml --packager deb --target dist/
+          ls -la dist/
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: dist/tango_*.deb
+
+  release:
+    needs: [build, package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-files
+
+      - name: Flatten and prepare release
+        run: |
+          mkdir -p release
+          find release-files -type f -name "tango-*" -exec cp {} release/ \;
+          find release-files -type f -name "tango_*" -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

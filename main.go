@@ -12,12 +12,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Version = "dev"
+
 func main() {
 	var dump bool
 
 	rootCmd := &cobra.Command{
-		Use:   "tango",
-		Short: "Distributed testing CLI",
+		Use:     "tango",
+		Short:   "Distributed testing CLI",
+		Version: Version,
 	}
 
 	testCmd := &cobra.Command{

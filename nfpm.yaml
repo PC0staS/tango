@@ -1,0 +1,39 @@
+name: tango
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: utils
+priority: optional
+maintainer: Pablo <pablo@example.com>
+description: |
+  Declarative API testing CLI. Define HTTP workflows in YAML,
+  chain requests, capture data, validate responses with JSONPath
+  assertions, and run conditional steps with retry logic.
+homepage: https://github.com/pc0stas/tango
+license: MIT
+
+contents:
+  - src: ./dist/tango
+    dst: /usr/bin/tango
+
+  - src: ./dist/completions/tango.bash
+    dst: /usr/share/bash-completion/completions/tango
+
+  - src: ./dist/completions/_tango
+    dst: /usr/share/zsh/site-functions/_tango
+
+  - src: ./dist/completions/tango.fish
+    dst: /usr/share/fish/vendor_completions.d/tango.fish
+
+  - src: ./README.md
+    dst: /usr/share/doc/tango/README.md
+
+  - src: ./LICENSE
+    dst: /usr/share/doc/tango/LICENSE
+
+overrides:
+  deb:
+    depends:
+      - ca-certificates
+  rpm:
+    group: Development/Tools

@@ -1,0 +1,5 @@
+tango
+tango.exe
+build/
+*.test
+*.out
