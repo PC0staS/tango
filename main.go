@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Version = "dev"
+var Version = "1.0.0"
 
 func main() {
 	var dump bool
