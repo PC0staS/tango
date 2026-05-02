@@ -19,6 +19,9 @@ fi
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Clean up any stale backups from previous aborted runs
+rm -f main.go.bak tango.spec.bak
+
 if [ -n "$(git status --porcelain)" ]; then
   echo "Working tree not clean. Commit or stash changes first."
   git status --porcelain
