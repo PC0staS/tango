@@ -1,0 +1,17 @@
+# examples/health_check.yaml
+name: "health-check"
+description: "Test basic endpoint"
+version: "1.0"
+
+config:
+  timeout_default: 5s
+  stop_on_error: false
+
+steps:
+  - name: "ping"
+    description: "Check if server is alive"
+    request:
+      method: "GET"
+      url: "https://pablocostas.dev"
+    expect:
+      status: 200

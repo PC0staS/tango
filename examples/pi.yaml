@@ -1,0 +1,35 @@
+# examples/pi_integration.yaml
+name: "pi-services-check"
+description: "Check all Pi homelab services"
+version: "1.0"
+
+config:
+  timeout_default: 5s
+  stop_on_error: false
+  variables:
+    pi_host: "home.arpa"
+
+steps:
+  - name: "check-pi-hole"
+    request:
+      method: "GET"
+      url: "http://pihole.{{ .pi_host }}:80/admin"
+    expect:
+      status: 200
+
+  - name: "check-nextcloud"
+    request:
+      method: "GET"
+      url: "http://nextcloud.{{ .pi_host }}"
+    expect:
+      status: 200
+
+  - name: "check-grafana"
+    request:
+      method: "GET"
+      url: "http://grafana.{{ .pi_host }}"
+    expect:
+      status: 200
+      body:
+        - path: "$.database"
+          equals: "ok"
