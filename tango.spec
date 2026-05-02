@@ -6,7 +6,7 @@ License:        MIT
 URL:            https://github.com/pc0stas/tango
 Source0:        tango-%{version}.tar.gz
 
-BuildRequires:  golang >= 1.24
+BuildRequires:  golang >= 1.22
 BuildRequires:  git
 
 %description
