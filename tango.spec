@@ -1,12 +1,12 @@
 Name:           tango
-Version:        1.0.0
+Version:        1.0.1
 Release:        1%{?dist}
 Summary:        Declarative API testing CLI
 License:        MIT
 URL:            https://github.com/pc0stas/tango
 Source0:        tango-%{version}.tar.gz
 
-BuildRequires:  golang >= 1.22
+BuildRequires:  golang >= 1.25
 BuildRequires:  git
 
 %description
