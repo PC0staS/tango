@@ -1,0 +1,53 @@
+# examples/assertions.yaml
+# Shows all assertion types
+name: "assertions-demo"
+description: "Demonstrates every assertion type in tango"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+
+steps:
+  - name: "full_assertions"
+    description: "Validate a complex JSON response"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/users/1"
+    expect:
+      status: 200
+      body:
+        - path: "id"
+          equals: 1
+        - path: "id"
+          type: "number"
+        - path: "name"
+          contains: "Leanne"
+        - path: "email"
+          matches: "^[\\w.-]+@[\\w.-]+\\.\\w+$"
+        - path: "email"
+          endswith: ".biz"
+        - path: "username"
+          startswith: "Bret"
+        - path: "id"
+          greater_than: 0
+        - path: "id"
+          less_than_or_equal: 100
+        - path: "id"
+          between: [1, 10]
+        - path: "address"
+          type: "object"
+        - path: "address"
+          exists: true
+        - path: "address.street"
+          type: "string"
+        - path: "address.geo"
+          deep_equals:
+            lat: "-37.3159"
+            lng: "81.1496"
+        - path: "website"
+          exists: true
+        - path: "website"
+          type: "string"
+        - path: "website"
+          contains: ".org"
+      response_time_ms: 5000

@@ -1,0 +1,55 @@
+# examples/crud.yaml
+# Full flow: capture data from one request and reuse in others
+name: "capture-and-reuse"
+description: "Demonstrates capture of response data and reuse in subsequent requests"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+
+steps:
+  - name: "list_posts"
+    description: "Get all posts and capture the first post id"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts"
+    expect:
+      status: 200
+      body:
+        - path: "0.id"
+          greater_than: 0
+        - path: "0.title"
+          exists: true
+    capture:
+      json_path:
+        first_id: "0.id"
+        first_title: "0.title"
+      response_body: "all_posts"
+
+  - name: "get_post"
+    description: "Fetch the specific post using captured id in the URL and verify the title"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/{{ steps.list_posts.first_id }}"
+    expect:
+      status: 200
+      body:
+        - path: "id"
+          equals: "{{ steps.list_posts.first_id }}"
+        - path: "title"
+          exists: true
+        - path: "body"
+          exists: true
+
+  - name: "get_comments"
+    description: "Fetch comments for that post using the captured id"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/{{ steps.list_posts.first_id }}/comments"
+    expect:
+      status: 200
+      body:
+        - path: "0.postId"
+          exists: true
+        - path: "0.id"
+          greater_than: 0

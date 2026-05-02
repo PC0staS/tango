@@ -1,0 +1,51 @@
+# examples/conditional.yaml
+# Shows run_if, skip_if_failed and skip
+name: "conditional-flow"
+description: "Demonstrates conditional execution"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+
+steps:
+  - name: "health"
+    description: "Check if the API is alive"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/1"
+    expect:
+      status: 200
+
+  - name: "cleanup_on_failure"
+    description: "Only runs if health failed"
+    skip: true
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts"
+    expect:
+      status: 200
+
+  - name: "details_on_success"
+    description: "Only runs if health passed"
+    run_if:
+      previous_step: "health"
+      status: "passed"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/1/comments"
+    expect:
+      status: 200
+      body:
+        - path: "0.postId"
+          type: "number"
+        - path: "0"
+          exists: true
+
+  - name: "fallback_on_error"
+    description: "Runs if the previous step is skipped or failed"
+    skip_if_failed: "details_on_success"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/"
+    expect:
+      status: 200

@@ -4,6 +4,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strings"
@@ -66,12 +67,26 @@ func (e *Executor) Run(ctx context.Context) (*ExecutionResult, error) {
 	for _, stepName := range order {
 		step := stepMap[stepName]
 
+		if state.ShouldSkip(step) {
+			stepResult := config.StepResult{
+				Name:          step.Name,
+				RequestMethod: step.Request.Method,
+				RequestURL:    step.Request.URL,
+				Status:        "skipped",
+			}
+			result.Steps = append(result.Steps, stepResult)
+			result.SkippedCount++
+			state.SetStepStatus(step.Name, "skipped")
+			continue
+		}
+
 		stepResult, err := e.executeStep(ctx, step, state)
 
 		if err != nil {
 			stepResult.Status = "failed"
 			stepResult.Error = err.Error()
 			result.FailedCount++
+			state.SetStepStatus(step.Name, "failed")
 
 			if e.workflow.Config.StopOnError {
 				result.Steps = append(result.Steps, stepResult)
@@ -80,6 +95,7 @@ func (e *Executor) Run(ctx context.Context) (*ExecutionResult, error) {
 		} else {
 			stepResult.Status = "passed"
 			result.PassedCount++
+			state.SetStepStatus(step.Name, "passed")
 		}
 
 		result.Steps = append(result.Steps, stepResult)
@@ -116,27 +132,64 @@ func (e *Executor) executeStep(ctx context.Context, step *config.Step, state *Ex
 	ctx, cancel := context.WithTimeout(ctx, *step.Timeout)
 	defer cancel()
 
-	// Execute request
-	resp, err := e.client.Do(ctx, req)
-	if err != nil {
-		return stepResult, fmt.Errorf("request failed: %w", err)
+	// Execute request with retries
+	var resp *http.Response
+	var reqErr error
+	for attempt := 0; attempt <= step.Retry.Count; attempt++ {
+		resp, reqErr = e.client.Do(ctx, req)
+		if reqErr != nil {
+			break
+		}
+		if !shouldRetry(resp.StatusCode, step.Retry.RetryOnStatus) {
+			break
+		}
+		if attempt < step.Retry.Count {
+			time.Sleep(backoffDelay(attempt+1, step.Retry))
+		}
+	}
+	if reqErr != nil {
+		return stepResult, fmt.Errorf("request failed: %w", reqErr)
 	}
 
 	stepResult.RequestDuration = resp.Duration
 	stepResult.ResponseStatus = resp.StatusCode
 	stepResult.ResponseBody = resp.Body
 
+	// Resolve templates in assertions
+	expect := step.Expect
+	for i := range expect.Body {
+		a := &expect.Body[i]
+		a.Path = e.resolveTemplates(a.Path, state)
+		a.Type = e.resolveTemplates(a.Type, state)
+		a.Contains = e.resolveTemplates(a.Contains, state)
+		a.Startswith = e.resolveTemplates(a.Startswith, state)
+		a.Endswith = e.resolveTemplates(a.Endswith, state)
+		a.Matches = e.resolveTemplates(a.Matches, state)
+		if s, ok := a.Equals.(string); ok {
+			a.Equals = e.resolveTemplates(s, state)
+		}
+	}
+
 	// Validate assertions
-	if err := assertions.Validate(&step.Expect, resp); err != nil {
+	if err := assertions.Validate(&expect, resp); err != nil {
 		return stepResult, err
 	}
 
 	// Capture variables
+	captured := make(map[string]interface{})
 	if len(step.Capture.JSONPath) > 0 {
-		captured, err := e.captureVariables(resp.Body, step.Capture.JSONPath)
+		vars, err := e.captureJSONPath(resp.Body, step.Capture.JSONPath)
 		if err != nil {
 			return stepResult, fmt.Errorf("capture failed: %w", err)
 		}
+		for k, v := range vars {
+			captured[k] = v
+		}
+	}
+	if step.Capture.ResponseBody != "" {
+		captured[step.Capture.ResponseBody] = resp.Body
+	}
+	if len(captured) > 0 {
 		stepResult.CapturedVars = captured
 		state.Capture(step.Name, captured)
 	}
@@ -186,7 +239,7 @@ func (e *Executor) resolveTemplates(s string, state *ExecutionState) string {
 	})
 }
 
-func (e *Executor) captureVariables(body string, jsonPaths map[string]string) (map[string]interface{}, error) {
+func (e *Executor) captureJSONPath(body string, jsonPaths map[string]string) (map[string]interface{}, error) {
 	captured := make(map[string]interface{})
 	for varName, path := range jsonPaths {
 		result := gjson.Get(body, path)
@@ -196,4 +249,19 @@ func (e *Executor) captureVariables(body string, jsonPaths map[string]string) (m
 		captured[varName] = result.Value()
 	}
 	return captured, nil
+}
+
+func shouldRetry(status int, retryables []int) bool {
+	for _, s := range retryables {
+		if s == status {
+			return true
+		}
+	}
+	return false
+}
+
+func backoffDelay(attempt int, retry config.RetrySpec) time.Duration {
+	base := float64(retry.Delay.Milliseconds())
+	delay := base * math.Pow(retry.BackoffMultiplier, float64(attempt-1))
+	return time.Duration(delay) * time.Millisecond
 }

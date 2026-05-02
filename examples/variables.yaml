@@ -1,0 +1,34 @@
+# examples/variables.yaml
+# Shows config variables, env variables, and template substitution
+name: "variables-demo"
+description: "Demonstrates variable substitution"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+  variables:
+    api_host: "jsonplaceholder.typicode.com"
+    resource: "posts"
+    item_id: "1"
+
+steps:
+  - name: "fetch_with_variables"
+    description: "Uses config variables in the URL"
+    request:
+      method: "GET"
+      url: "https://{{ .api_host }}/{{ .resource }}/{{ .item_id }}"
+    expect:
+      status: 200
+      body:
+        - path: "id"
+          equals: 1
+
+  - name: "fetch_comments"
+    description: "Long-form config variable syntax"
+    request:
+      method: "GET"
+      url: "https://{{ config.api_host }}/comments"
+      headers:
+        X-Custom: "{{ config.resource }}-client"
+    expect:
+      status: 200

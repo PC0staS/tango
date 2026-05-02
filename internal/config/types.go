@@ -16,14 +16,24 @@ type WorkflowConfig struct {
 }
 
 type Step struct {
-	Name string `yaml:"name"`
-	Description string `yaml:"description"`
-	Request RequestSpec `yaml:"request"`
-	Expect ExpectSpec `yaml:"expect"`
-	DependsOn []string `yaml:"depends_on"`
-	Timeout *time.Duration `yaml:"timeout"`
-	Capture CaptureSpec `yaml:"capture"`
-	Retry RetrySpec `yaml:"retry"`
+	Name         string          `yaml:"name"`
+	Description  string          `yaml:"description"`
+	Request      RequestSpec     `yaml:"request"`
+	Expect       ExpectSpec      `yaml:"expect"`
+	DependsOn    []string        `yaml:"depends_on"`
+	Timeout      *time.Duration  `yaml:"timeout"`
+	Skip         bool            `yaml:"skip"`
+	SkipIfFailed string          `yaml:"skip_if_failed"`
+	RunIf        *RunIfCondition `yaml:"run_if"`
+	Capture      CaptureSpec     `yaml:"capture"`
+	Retry        RetrySpec       `yaml:"retry"`
+}
+
+type RunIfCondition struct {
+	PreviousStep string `yaml:"previous_step"`
+	Status       string `yaml:"status"`
+	EnvVar       string `yaml:"env_var"`
+	EnvVarExists string `yaml:"env_var_exists"`
 }
 
 type RequestSpec struct {
@@ -43,7 +53,8 @@ type ExpectSpec struct {
 }
 
 type CaptureSpec struct {
-	JSONPath map[string]string `yaml:"json_path"`
+	JSONPath     map[string]string `yaml:"json_path"`
+	ResponseBody string            `yaml:"response_body"`
 }
 
 type RetrySpec struct {

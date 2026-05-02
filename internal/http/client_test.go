@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -9,7 +10,9 @@ import (
 
 func TestClient_Do(t *testing.T) {
 	// Crear mock server
-	server := httptest.NewServer(nil)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
 	defer server.Close()
 
 	client := NewClient(5 * time.Second)

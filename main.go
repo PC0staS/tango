@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pc0stas/tango/cmd"
 	"github.com/pc0stas/tango/internal/config"
 	"github.com/pc0stas/tango/internal/executor"
 	"github.com/pc0stas/tango/internal/output"
@@ -27,6 +28,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(testCmd)
+	rootCmd.AddCommand(cmd.NewValidateCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

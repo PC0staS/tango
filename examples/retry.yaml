@@ -1,0 +1,22 @@
+# examples/retry.yaml
+# Shows retry logic with exponential backoff
+name: "retry-demo"
+description: "Demonstrates retry strategy with exponential backoff"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+
+steps:
+  - name: "flaky_endpoint"
+    description: "Will retry on server errors with exponential backoff"
+    request:
+      method: "GET"
+      url: "https://pablocostas.dev/666"
+    retry:
+      count: 3
+      delay: 1s
+      backoff_multiplier: 2.0
+      retry_on_status: [500, 502, 503, 504, 404]
+    expect:
+      status: 200

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/pc0stas/tango/internal/config"
@@ -53,7 +54,7 @@ func ValidateAssertion(assertion *config.AssertionSpec, body string) error {
 
 	switch {
 	case assertion.Equals != nil:
-		if !reflect.DeepEqual(value, assertion.Equals) {
+		if !valuesEqual(value, assertion.Equals) {
 			return fmt.Errorf("value mismatch: expected %v, got %v", assertion.Equals, value)
 		}
 
@@ -198,6 +199,15 @@ func ValidateAssertion(assertion *config.AssertionSpec, body string) error {
 	return nil
 }
 
+func valuesEqual(a, b any) bool {
+	aNum, aOk := toFloat64(a)
+	bNum, bOk := toFloat64(b)
+	if aOk && bOk {
+		return aNum == bNum
+	}
+	return reflect.DeepEqual(a, b)
+}
+
 func toFloat64(v any) (float64, bool) {
 	switch n := v.(type) {
 	case float64:
@@ -206,6 +216,9 @@ func toFloat64(v any) (float64, bool) {
 		return float64(n), true
 	case int64:
 		return float64(n), true
+	case string:
+		f, err := strconv.ParseFloat(n, 64)
+		return f, err == nil
 	default:
 		return 0, false
 	}

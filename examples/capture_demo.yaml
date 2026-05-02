@@ -1,0 +1,73 @@
+# examples/capture_demo.yaml
+# Demostración completa de captura y reuso de datos entre steps
+name: "capture-demo"
+description: "Capture JSON fields, full body, and reuse in URL, headers, body and assertions"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+
+steps:
+  # ── Step 1: capturar campos específicos y el body entero ──
+  - name: "fetch_first_post"
+    description: "Obtiene el primer post y captura su id, user_id y body completo"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/1"
+    expect:
+      status: 200
+      body:
+        - path: "id"
+          greater_than: 0
+    capture:
+      json_path:
+        post_id: "id"
+        user_id: "userId"
+      response_body: "original_post"
+
+  # ── Step 2: usar capturas en la URL y en aserciones ──
+  - name: "fetch_user"
+    description: "Usa el user_id capturado en la URL y lo compara en la aserción"
+    request:
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/users/{{ steps.fetch_first_post.user_id }}"
+    expect:
+      status: 200
+      body:
+        - path: "id"
+          equals: "{{ steps.fetch_first_post.user_id }}"
+        - path: "name"
+          exists: true
+
+  # ── Step 3: usar capturas en headers y body ──
+  - name: "create_post"
+    description: "Crea un post usando el user_id capturado en el body y header custom"
+    request:
+      method: "POST"
+      url: "https://jsonplaceholder.typicode.com/posts"
+      headers:
+        Content-Type: "application/json"
+        X-Original-Post: "{{ steps.fetch_first_post.post_id }}"
+      body: |
+        {
+          "title": "Post for user {{ steps.fetch_first_post.user_id }}",
+          "body": "Created via tango capture demo",
+          "userId": {{ steps.fetch_first_post.user_id }}
+        }
+    expect:
+      status: 201
+      body:
+        - path: "id"
+          greater_than: 0
+
+  # ── Step 4: usar el body capturado entero y reenviarlo ──
+  - name: "replay_body"
+    description: "Reutiliza el body capturado del step 1 como body de otro POST"
+    request:
+      method: "POST"
+      url: "https://jsonplaceholder.typicode.com/posts"
+      headers:
+        Content-Type: "application/json"
+      body: "{{ steps.fetch_first_post.original_post }}"
+    expect:
+      status: 201

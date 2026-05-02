@@ -31,5 +31,5 @@ steps:
     expect:
       status: 200
       body:
-        - path: "$.database"
+        - path: "database"
           equals: "ok"
