@@ -37,7 +37,8 @@ jobs:
       - name: Build SRPM and submit to COPR
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          git archive --format=tar.gz --prefix=tango-${VERSION}/ HEAD -o tango-${VERSION}.tar.gz
+          go mod vendor
+          tar -czf tango-${VERSION}.tar.gz --transform "s,^,tango-${VERSION}/," * .gitignore
           rpmbuild -bs tango.spec \
             --define "_sourcedir $PWD" \
             --define "_srcrpmdir $PWD" \
