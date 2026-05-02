@@ -21,6 +21,7 @@ var tmplRe = regexp.MustCompile(`\{\{([^}]+)\}\}`)
 type Executor struct {
 	workflow *config.Workflow
 	client   *http.Client
+	Dump     bool
 }
 
 type ExecutionResult struct {
@@ -132,6 +133,11 @@ func (e *Executor) executeStep(ctx context.Context, step *config.Step, state *Ex
 	ctx, cancel := context.WithTimeout(ctx, *step.Timeout)
 	defer cancel()
 
+	// Dump request
+	if e.Dump {
+		e.printRequestDump(step.Name, req)
+	}
+
 	// Execute request with retries
 	var resp *http.Response
 	var reqErr error
@@ -154,6 +160,11 @@ func (e *Executor) executeStep(ctx context.Context, step *config.Step, state *Ex
 	stepResult.RequestDuration = resp.Duration
 	stepResult.ResponseStatus = resp.StatusCode
 	stepResult.ResponseBody = resp.Body
+
+	// Dump response
+	if e.Dump {
+		e.printResponseDump(resp)
+	}
 
 	// Resolve templates in assertions
 	expect := step.Expect
@@ -264,4 +275,40 @@ func backoffDelay(attempt int, retry config.RetrySpec) time.Duration {
 	base := float64(retry.Delay.Milliseconds())
 	delay := base * math.Pow(retry.BackoffMultiplier, float64(attempt-1))
 	return time.Duration(delay) * time.Millisecond
+}
+
+func (e *Executor) printRequestDump(stepName string, req *http.Request) {
+	fmt.Println()
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Printf("  Step: %s\n", stepName)
+	fmt.Println("  → Request")
+	fmt.Printf("  Method: %s\n", req.Method)
+	fmt.Printf("  URL: %s\n", req.URL)
+	if len(req.Headers) > 0 {
+		fmt.Println("  Headers:")
+		for k, v := range req.Headers {
+			fmt.Printf("    %s: %s\n", k, v)
+		}
+	}
+	if req.Body != "" {
+		fmt.Println("  Body:")
+		for _, line := range strings.Split(req.Body, "\n") {
+			fmt.Printf("    %s\n", line)
+		}
+	}
+}
+
+func (e *Executor) printResponseDump(resp *http.Response) {
+	fmt.Printf("  ← Response  %d  (%v)\n", resp.StatusCode, resp.Duration)
+	fmt.Printf("  Body:")
+	if len(resp.Body) > 500 {
+		fmt.Printf(" %s...\n", resp.Body[:500])
+	} else {
+		fmt.Println()
+		for _, line := range strings.Split(resp.Body, "\n") {
+			fmt.Printf("    %s\n", line)
+		}
+	}
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
 }

@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	var dump bool
+
 	rootCmd := &cobra.Command{
 		Use:   "tango",
 		Short: "Distributed testing CLI",
@@ -23,9 +25,11 @@ func main() {
 		Short: "Execute a test workflow",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runTest(args[0])
+			return runTest(args[0], dump)
 		},
 	}
+
+	testCmd.Flags().BoolVar(&dump, "dump", false, "Dump full request and response details")
 
 	rootCmd.AddCommand(testCmd)
 	rootCmd.AddCommand(cmd.NewValidateCmd())
@@ -36,7 +40,7 @@ func main() {
 	}
 }
 
-func runTest(workflowFile string) error {
+func runTest(workflowFile string, dump bool) error {
 	// 1. Parse
 	workflow, err := config.ParseWorkflow(workflowFile)
 	if err != nil {
@@ -45,6 +49,7 @@ func runTest(workflowFile string) error {
 
 	// 2. Execute
 	exec := executor.NewExecutor(workflow)
+	exec.Dump = dump
 	result, err := exec.Run(context.Background())
 	if err != nil {
 		return fmt.Errorf("execution failed: %w", err)
