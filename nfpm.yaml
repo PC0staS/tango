@@ -35,5 +35,3 @@ overrides:
   deb:
     depends:
       - ca-certificates
-  rpm:
-    group: Development/Tools
