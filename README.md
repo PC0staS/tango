@@ -9,7 +9,7 @@ Declarative API testing CLI. Define HTTP workflows in YAML, chain requests, capt
 brew tap pc0stas/tango && brew install tango
 
 # Fedora / RHEL
-sudo dnf copr enable pc0stas/tango && sudo dnf install tango
+sudo dnf copr enable pablocostas/tango && sudo dnf install tango
 
 # Debian / Ubuntu
 wget https://github.com/pc0stas/tango/releases/latest/download/tango_amd64.deb
