@@ -1,0 +1,150 @@
+name: "test_user_pipeline"
+description: "Test complete user pipeline"
+
+config:
+  timeout_default: 10s
+  stop_on_error: false
+
+steps:
+  - name: "create_user"
+    description: "Creates a regular user"
+    request:
+      method: "POST"
+      url: "http://localhost:8082/users"
+      headers:
+        Content-Type: "application/json"
+      body: |
+        {
+          "id": "user-1",
+          "name": "Pablo Costas Nieto",
+          "age": 20,
+          "username": "pablocostas",
+          "email": "pablocostasnieto@gmail.com",
+          "password": "password"
+        }
+    expect:
+      status: 201
+      body:
+        - path: "id"
+          exists: true
+    capture:
+      json_path:
+        user_id: "id"
+
+  - name: "login_user"
+    description: "Login as regular user"
+    skip_if_failed: "create_user"
+    request:
+      method: "POST"
+      url: "http://localhost:8082/login"
+      headers:
+        Content-Type: "application/json"
+      body: |
+        {
+          "username": "pablocostas",
+          "password": "password"
+        }
+    expect:
+      status: 200
+      body:
+        - path: "token"
+          exists: true
+    capture:
+      json_path:
+        token: "token"
+
+  - name: "test_protected_endpoint"
+    description: "User can access their own data with token"
+    skip_if_failed: "create_user"
+    request:
+      method: "GET"
+      url: "http://localhost:8082/users/{{steps.create_user.user_id}}"
+      headers:
+        Authorization: "Bearer {{steps.login_user.token}}"
+    expect:
+      status: 200
+      body:
+        - path: "id"
+          equals: "{{steps.create_user.user_id}}"
+
+  - name: "create_admin_user"
+    description: "Creates an admin user using admintoken query param"
+    request:
+      method: "POST"
+      url: "http://localhost:8082/users?admintoken=123"
+      headers:
+        Content-Type: "application/json"
+      body: |
+        {
+          "id": "admin-1",
+          "name": "Admin User",
+          "age": 30,
+          "username": "adminuser",
+          "email": "admin@example.com",
+          "password": "adminpassword"
+        }
+    expect:
+      status: 201
+      body:
+        - path: "id"
+          exists: true
+        - path: "role"
+          equals: "admin"
+    capture:
+      json_path:
+        admin_id: "id"
+
+  - name: "login_admin_user"
+    description: "Login as admin user"
+    skip_if_failed: "create_admin_user"
+    request:
+      method: "POST"
+      url: "http://localhost:8082/login"
+      headers:
+        Content-Type: "application/json"
+      body: |
+        {
+          "username": "adminuser",
+          "password": "adminpassword"
+        }
+    expect:
+      status: 200
+      body:
+        - path: "token"
+          exists: true
+    capture:
+      json_path:
+        admin_token: "token"
+
+  - name: "delete_user"
+    description: "Admin deletes the regular user"
+    skip_if_failed: "create_admin_user"
+    request:
+      method: "DELETE"
+      url: "http://localhost:8082/users/{{steps.create_user.user_id}}"
+      headers:
+        Authorization: "Bearer {{steps.login_admin_user.admin_token}}"
+    expect:
+      status: 204
+
+  - name: "verify_user_deleted"
+    description: "Verify deleted user returns 404"
+    skip_if_failed: "create_admin_user"
+    request:
+      method: "GET"
+      url: "http://localhost:8082/users/{{steps.create_user.user_id}}"
+      headers:
+        Authorization: "Bearer {{steps.login_admin_user.admin_token}}"
+    expect:
+      status: 404
+
+  - name: "cleanup_admin_user"
+    description: "Admin deletes itself to clean up"
+    skip_if_failed: "create_admin_user"
+    request:
+      method: "DELETE"
+      url: "http://localhost:8082/users/{{steps.create_admin_user.admin_id}}"
+      headers:
+        Authorization: "Bearer {{steps.login_admin_user.admin_token}}"
+    expect:
+      status: 204
