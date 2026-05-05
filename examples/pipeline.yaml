@@ -15,7 +15,6 @@ steps:
         Content-Type: "application/json"
       body: |
         {
-          "id": "user-1",
           "name": "Pablo Costas Nieto",
           "age": 20,
           "username": "pablocostas",
@@ -58,7 +57,7 @@ steps:
     skip_if_failed: "create_user"
     request:
       method: "GET"
-      url: "http://localhost:8082/users/{{steps.create_user.user_id}}"
+      url: "http://localhost:8082/users/me"
       headers:
         Authorization: "Bearer {{steps.login_user.token}}"
     expect:
@@ -76,7 +75,6 @@ steps:
         Content-Type: "application/json"
       body: |
         {
-          "id": "admin-1",
           "name": "Admin User",
           "age": 30,
           "username": "adminuser",

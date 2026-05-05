@@ -3,11 +3,18 @@ package executor
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/pc0stas/tango/internal/config"
 )
 
 func TopologicalSort(steps []config.Step) ([]string, error) {
+	// Build position map (original order in YAML)
+	posMap := make(map[string]int)
+	for i, step := range steps {
+		posMap[step.Name] = i
+	}
+
 	// Build graph and in-degree map
 	stepMap := make(map[string]bool)
 	inDegree := make(map[string]int)
@@ -29,16 +36,21 @@ func TopologicalSort(steps []config.Step) ([]string, error) {
 		}
 	}
 
-	// Kahn's algorithm
+	// Collect initial in-degree 0 nodes
 	queue := make([]string, 0)
-	for name, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, name)
+	for _, step := range steps {
+		if inDegree[step.Name] == 0 {
+			queue = append(queue, step.Name)
 		}
 	}
 
 	result := make([]string, 0)
 	for len(queue) > 0 {
+		// Sort queue by original YAML position for deterministic output
+		sort.Slice(queue, func(i, j int) bool {
+			return posMap[queue[i]] < posMap[queue[j]]
+		})
+
 		current := queue[0]
 		queue = queue[1:]
 		result = append(result, current)
