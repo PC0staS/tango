@@ -15,6 +15,9 @@ sudo dnf copr enable pablocostas/tango && sudo dnf install tango
 wget https://github.com/pc0stas/tango/releases/latest/download/tango_amd64.deb
 sudo dpkg -i tango_amd64.deb
 
+# Arch Linux (AUR)
+yay -S tango-cli
+
 # From source
 git clone https://github.com/pc0stas/tango && cd tango && make build
 ```

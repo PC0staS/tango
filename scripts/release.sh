@@ -20,7 +20,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # Clean up any stale backups from previous aborted runs
-rm -f main.go.bak tango.spec.bak
+rm -f main.go.bak tango.spec.bak PKGBUILD.bak
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Working tree not clean. Commit or stash changes first."
@@ -40,26 +40,28 @@ echo "Updating version to $NO_V_VER (tag: $TAG_VER)"
 
 sed -E -i.bak "s/^(var Version = \").*(\")/\1${NO_V_VER}\2/" main.go
 sed -E -i.bak "s/^(Version:)[[:space:]]+.*/Version:        ${NO_V_VER}/" tango.spec
+sed -E -i.bak "s/^pkgver=.*/pkgver=${NO_V_VER}/" PKGBUILD
 
 echo "Files updated. Showing git diff for review:"
-git --no-pager diff -- main.go tango.spec || true
+git --no-pager diff -- main.go tango.spec PKGBUILD || true
 
 read -p "Continue and commit changes? [y/N] " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   echo "Aborted by user. Restoring backups."
   mv -f main.go.bak main.go || true
   mv -f tango.spec.bak tango.spec || true
+  mv -f PKGBUILD.bak PKGBUILD || true
   exit 5
 fi
 
-git add main.go tango.spec
+git add main.go tango.spec PKGBUILD
 git commit -m "Release ${TAG_VER}"
 git push origin "$CURRENT_BRANCH"
 
 git tag -a "${TAG_VER}" -m "Release ${TAG_VER}"
 git push origin "${TAG_VER}"
 
-rm -f main.go.bak tango.spec.bak
+rm -f main.go.bak tango.spec.bak PKGBUILD.bak
 
 echo "Done. Release ${TAG_VER} created and pushed."
-echo "GitHub Actions will now build and publish binaries, .rpm, and .deb."
+echo "GitHub Actions will now build and publish binaries, .rpm, .deb, and AUR."
