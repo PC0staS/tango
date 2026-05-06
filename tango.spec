@@ -1,5 +1,5 @@
 Name:           tango
-Version:        1.0.4
+Version:        1.0.5
 Release:        1%{?dist}
 Summary:        Declarative API testing CLI
 License:        MIT
