@@ -1,6 +1,6 @@
 # Maintainer: Pablo <pablo@example.com>
 pkgname=tango-cli
-pkgver=1.0.8
+pkgver=1.0.9
 pkgrel=1
 pkgdesc="Declarative API testing CLI"
 arch=('x86_64' 'aarch64')
