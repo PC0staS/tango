@@ -12,7 +12,7 @@ source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz
 sha256sums=('SKIP')
 
 build() {
-  cd "${pkgname}-${pkgver}"
+  cd "tango-${pkgver}"
   export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
   go build -ldflags "-X main.Version=v${pkgver}" -o tango .
 
@@ -22,7 +22,7 @@ build() {
 }
 
 package() {
-  cd "${pkgname}-${pkgver}"
+  cd "tango-${pkgver}"
   install -Dm755 tango "${pkgdir}/usr/bin/tango"
   install -Dm644 tango.bash "${pkgdir}/usr/share/bash-completion/completions/tango"
   install -Dm644 _tango "${pkgdir}/usr/share/zsh/site-functions/_tango"
