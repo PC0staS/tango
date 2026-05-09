@@ -1,10 +1,11 @@
-.PHONY: build build-all test run validate lint clean help
+.PHONY: build build-all completions test run validate lint clean help
 
-BINARY    ?= tango
-BUILD_DIR ?= build
-GO        ?= go
-GOFLAGS   ?= -v
-VERSION   ?= dev
+BINARY       ?= tango
+BUILD_DIR    ?= build
+COMPLETIONS_DIR ?= completions
+GO           ?= go
+GOFLAGS      ?= -v
+VERSION      ?= dev
 
 build:
 	$(GO) build $(GOFLAGS) -ldflags "-X main.Version=$(VERSION)" -o $(BINARY) .
@@ -22,6 +23,13 @@ build-all:
 	@echo "==> windows/amd64"
 	GOOS=windows GOARCH=amd64   $(GO) build $(GOFLAGS) -ldflags "-X main.Version=$(VERSION)" -o $(BUILD_DIR)/tango-windows-amd64.exe .
 	@ls -lh $(BUILD_DIR)/
+
+completions: build
+	@mkdir -p $(COMPLETIONS_DIR)
+	./$(BINARY) completion bash > $(COMPLETIONS_DIR)/tango.bash
+	./$(BINARY) completion zsh  > $(COMPLETIONS_DIR)/_tango
+	./$(BINARY) completion fish > $(COMPLETIONS_DIR)/tango.fish
+	@echo "Completions generated in ./$(COMPLETIONS_DIR)/"
 
 test:
 	$(GO) test $(GOFLAGS) ./internal/...
@@ -41,12 +49,14 @@ lint:
 clean:
 	rm -f $(BINARY)
 	rm -rf $(BUILD_DIR)
+	rm -rf $(COMPLETIONS_DIR)
 
 help:
 	@echo "make build         Build local binary into ./$(BINARY)"
 	@echo "make build-all     Cross-compile for all platforms into ./$(BUILD_DIR)"
+	@echo "make completions   Build + generate shell completions into ./$(COMPLETIONS_DIR)"
 	@echo "make test          Run all tests"
 	@echo "make run           Build + run health_check example"
 	@echo "make validate      Validate all example YAMLs"
 	@echo "make lint          Run linter"
-	@echo "make clean         Remove binary and build dir"
+	@echo "make clean         Remove binary, build dir, and completions"

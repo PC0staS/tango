@@ -28,6 +28,21 @@ git clone https://github.com/pc0stas/tango && cd tango && make build
 tango test examples/health_check.yaml
 ```
 
+## Shell completions
+
+Package managers (brew, dnf, dpkg) install completions automatically. If you installed from source or a raw binary, enable them manually:
+
+```bash
+# bash — add to ~/.bashrc
+source <(tango completion bash)
+
+# zsh — add to ~/.zshrc
+source <(tango completion zsh)
+
+# fish
+tango completion fish > ~/.config/fish/completions/tango.fish
+```
+
 ## Documentation
 
 See [docs/](docs/) for full guides on workflows, assertions, variables, conditional execution, retries, and more.
